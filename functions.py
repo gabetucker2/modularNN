@@ -103,7 +103,7 @@ def C_fwdProp(C_pre, npre_npost_a):
     # calculate postsynaptic action potential
     C_postActivation = []
     for i_post in range(n_post):
-        C_postAxonPotentials = npre_npost_caxonPotential[:][i_post]
+        C_postAxonPotentials = [row[i_post] for row in npre_npost_caxonPotential if len(row) > i_post]
         C_postActivation.append(c_postActivation(C_postAxonPotentials))
     
     # return c_postActivation
