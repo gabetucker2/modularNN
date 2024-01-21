@@ -1,0 +1,14 @@
+i = index
+n = number
+a = axon
+c = charge
+d = dataset
+tr = training
+te = testing
+pre = presynaptic neuron
+post = postsynaptic neuron
+fwdProp = forward propagation
+backProp = back propagation
+
+lowercase = scalar
+uppercase = vector
