@@ -71,8 +71,8 @@ def validate_hebbian(letters_outputArrays):
     randomVariances = []
     for _ in nSamples:
         randomSample = random.sample(flattenedMatrix, parameters.nhalf_D)
-        randomMeans.extend(mean(randomSample))
-        randomVariances.extend(sample_variance(randomSample))
+        randomMeans.append(mean(randomSample))
+        randomVariances.append(sample_variance(randomSample))
 
     print(f"{nSamples} random sample average")
     print(f"--Mean: {mean(randomMeans)}")
@@ -93,18 +93,18 @@ def C_fwdProp(C_pre, npre_npost_a):
     npre_npost_caxonPotential = [] # there are n_pre arrays of n_post axon potentials                    
     for i_pre in range(n_pre):
         c_pre = C_pre[i_pre]
-        npre_npost_caxonPotential.extend([])
+        npre_npost_caxonPotential.append([])
         npost_caxonPotential = npre_npost_caxonPotential[i_pre] # there are n_post axon potentials
         for i_post in range(n_post):
             a_preToPost = npre_npost_a[i_pre][i_post]
-            c_axonPotential = c_axonPotential(c_pre, a_preToPost)
-            npost_caxonPotential.extend(c_axonPotential)
+            ac_axonPotential = c_axonPotential(c_pre, a_preToPost)
+            npost_caxonPotential.append(ac_axonPotential)
     
     # calculate postsynaptic action potential
     C_postActivation = []
     for i_post in range(n_post):
         C_postAxonPotentials = npre_npost_caxonPotential[:][i_post]
-        C_postActivation.extend(c_postActivation(C_postAxonPotentials))
+        C_postActivation.append(c_postActivation(C_postAxonPotentials))
     
     # return c_postActivation
     return C_postActivation

@@ -30,7 +30,7 @@ for epoch in range(parameters.n_epochs):
 
         print(f"--Letter {letter}")
 
-        outputs.extend([])
+        outputs.append([])
 
         random.shuffle(TR_letter)
         
@@ -53,9 +53,9 @@ for epoch in range(parameters.n_epochs):
                 C_hiddenLayer1 = functions.C_fwdProp(C_input, ninput_nhidden_a)
 
                 C_nhiddenLayers_hiddenLayerX = []
-                C_nhiddenLayers_hiddenLayerX.extend(C_hiddenLayer1)
+                C_nhiddenLayers_hiddenLayerX.append(C_hiddenLayer1)
                 for i_hiddenLayer in range(1, parameters.n_hiddenLayers):
-                    C_nhiddenLayers_hiddenLayerX.extend([])
+                    C_nhiddenLayers_hiddenLayerX.append([])
                     C_hiddenLayerPre = C_nhiddenLayers_hiddenLayerX[i_hiddenLayer - 1]
                     C_hiddenLayerPost = functions.C_fwdProp(C_hiddenLayerPre, nhiddenLayers_nhidden_nhidden_a[i_hiddenLayer])
                 
@@ -70,7 +70,7 @@ for epoch in range(parameters.n_epochs):
             # PRINT OUTPUT
 
             print(c_output)
-            outputs[letter].extend(c_output)
+            outputs[letter].append(c_output)
         
     functions.validate_hebbian(outputs)
     
