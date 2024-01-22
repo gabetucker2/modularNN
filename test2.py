@@ -9,4 +9,6 @@ def trigger_red_for_element(element_id):
         print(f"Failed to trigger for {element_id}.")
 
 if __name__ == "__main__":
-    trigger_red_for_element("circle1")  # Example: ID 'circle1'
+    # Example: Trigger red for a specific circle or line
+    trigger_red_for_element("circle_0_1")  # Circle in the first row, second column
+    # trigger_red_for_element("line_circle_0_1_to_circle_1_2")  # Line from circle_0_1 to circle_1_2

@@ -7,8 +7,8 @@ app = Flask(__name__)
 triggered = False
 color = "black"
 lerping = False
-
 lerpDuration = 1
+msPerIteration = 50
 
 @app.route('/')
 def index():
@@ -37,53 +37,108 @@ def index():
             .row {{
                 text-align: center;
             }}
-            .line {{}}
+            .line {{
+                position: absolute;
+                height: 5px;
+                background-color: black;
+                transform-origin: 0 0;
+                z-index: 1;
+            }}
         </style>
     </head>
     <body>
         <div id="circles-container">{content}</div>
         <div id="lines-container"></div>
         <script>
-            let lerping = false;
-            let lerpStart = 0;
-            const lerpDuration = {lerpDuration*1000}; // LERP back over 1 second
-            const originalColor = '#000000'; // Original color
-            const lerpCol = '#ff0000'; // Temporary color
+            function drawLines() {{
+                var linesContainer = document.getElementById("lines-container");
+                linesContainer.innerHTML = "";
 
-            function triggerLerp() {{
-                lerping = true;
-                lerpStart = performance.now();
-                requestAnimationFrame(lerpColor);
-            }}
+                var rows = document.getElementsByClassName("row");
+                if (rows.length < 2) return;
 
-            function lerpColor(time) {{
-                if (lerping) {{
-                    const elapsed = time - lerpStart;
-                    const progress = Math.min(elapsed / lerpDuration, 1); // Cap progress at 1
-                    console.log(progress)
+                for (let i = 0; i < rows.length - 1; i++) {{
+                    let startCircles = rows[i].getElementsByClassName("circle");
+                    let endCircles = rows[i + 1].getElementsByClassName("circle");
 
-                    updateCircleColors(progress);
-
-                    if (elapsed < lerpDuration) {{
-                        requestAnimationFrame(lerpColor);
-                    }} else {{
-                        lerping = false;
+                    for (let si = 0; si < startCircles.length; si++) {{
+                        for (let ei = 0; ei < endCircles.length; ei++) {{
+                            let startCircle = startCircles[si];
+                            let endCircle = endCircles[ei];
+                            let lineId = `line_${{startCircle.id}}_to_${{endCircle.id}}`;
+                            let line = document.createElement("div");
+                            line.className = "line";
+                            line.id = lineId;
+                            linesContainer.appendChild(line);
+                            positionLine(startCircle, endCircle, line);
+                        }}
                     }}
                 }}
             }}
 
-            function updateCircleColors(progress) {{
-                var circles = document.getElementsByClassName('circle');
-                var lines = document.getElementsByClassName('line');
-                const color = progress < 1 ? interpolateColor(lerpCol, originalColor, progress) : originalColor;
-                for (let circle of circles) {{
-                    circle.style.backgroundColor = color;
-                }}
-                for (let line of lines) {{
-                    line.style.backgroundColor = color;
-                    line.style.color = color;
+            function positionLine(startCircle, endCircle, line) {{
+                let startRect = startCircle.getBoundingClientRect();
+                let endRect = endCircle.getBoundingClientRect();
+
+                let startX = startRect.left + startRect.width / 2;
+                let startY = startRect.top + startRect.height / 2;
+                let endX = endRect.left + endRect.width / 2;
+                let endY = endRect.top + endRect.height / 2;
+
+                let lineLength = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+                let angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI;
+
+                line.style.width = `${{lineLength}}px`;
+                line.style.top = `${{startY}}px`;
+                line.style.left = `${{startX}}px`;
+                line.style.transform = `rotate(${{angle}}deg)`;
+            }}
+
+            let lerpingElements = {{}};
+            const lerpDuration = {lerpDuration * 1000};
+            const originalColor = '#000000'; // Define originalColor globally
+
+            function triggerLerp(elementId) {{
+                if (!lerpingElements[elementId]?.lerping) {{
+                    lerpingElements[elementId] = {{
+                        lerping: true,
+                        lerpStart: performance.now(),
+                        color: '#ff0000'
+                    }};
+                    requestAnimationFrame(function(timestamp) {{
+                        lerpColor(timestamp, elementId);
+                    }});
                 }}
             }}
+
+            function lerpColor(time, elementId) {{
+                const state = lerpingElements[elementId];
+                if (state.lerping) {{
+                    const elapsed = time - state.lerpStart;
+                    const progress = Math.min(elapsed / lerpDuration, 1);
+                    console.log(progress);
+                    updateElementColor(elementId, state.color, progress);
+
+                    if (elapsed < lerpDuration) {{
+                        requestAnimationFrame(function(timestamp) {{
+                            lerpColor(timestamp, elementId);
+                        }});
+                    }} else {{
+                        state.lerping = false;
+                        updateElementColor(elementId, originalColor, 1);
+                        fetch(`/reset-lerp/${{elementId}}`, {{ method: 'POST' }});
+                    }}
+                }}
+            }}
+
+            function updateElementColor(elementId, targetColor, progress) {{
+                const element = document.getElementById(elementId);
+                if (element) {{
+                    const interpolatedColor = interpolateColor(targetColor, originalColor, progress);
+                    element.style.backgroundColor = interpolatedColor;
+                }}
+            }}
+
 
             function interpolateColor(color1, color2, factor) {{
                 var result = '#';
@@ -96,42 +151,6 @@ def index():
                 return result;
             }}
 
-            function drawLines() {{
-                var linesContainer = document.getElementById("lines-container");
-                linesContainer.innerHTML = ""; // Clear previous lines
-
-                var rows = document.getElementsByClassName("row");
-                if (rows.length < 2) return; // Ensure there are at least two rows
-
-                for (let i = 0; i < rows.length - 1; i++) {{
-                    let startCircles = rows[i].getElementsByClassName("circle");
-                    let endCircles = rows[i + 1].getElementsByClassName("circle");
-
-                    for (let startCircle of startCircles) {{
-                        let startRect = startCircle.getBoundingClientRect();
-
-                        for (let endCircle of endCircles) {{
-                            let endRect = endCircle.getBoundingClientRect();
-
-                            let startX = startRect.left + startRect.width / 2;
-                            let startY = startRect.top + startRect.height / 2;
-                            let endX = endRect.left + endRect.width / 2;
-                            let endY = endRect.top + endRect.height / 2;
-
-                            let lineLength = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
-                            let angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI;
-
-                            let lineStyle = `position: absolute; width: ${{lineLength}}px; height: 5px; background-color: black; top: ${{startY}}px; left: ${{startX}}px; transform: rotate(${{angle}}deg); transform-origin: 0 0;`;
-
-                            let line = document.createElement("div");
-                            line.className = "line";
-                            line.setAttribute("style", lineStyle);
-                            linesContainer.appendChild(line);
-                        }}
-                    }}
-                }}
-            }}
-
             setInterval(function() {{
                 fetch("/check-update")
                     .then(response => response.json())
@@ -141,29 +160,47 @@ def index():
                             container.innerHTML = data.html;
                             drawLines(); // Call drawLines to add lines
                         }}
-                        if (data.lerping && !lerping) {{
-                            triggerLerp();
+                        // Check for elements that need to start lerping
+                        for (const elementId in data.lerpingElements) {{                        
+                            if (data.lerpingElements[elementId] && !lerpingElements[elementId]?.lerping) {{
+                                triggerLerp(elementId);
+                            }}
                         }}
                     }})
                     .catch(error => console.error("Error:", error));
-            }}, 50);
+            }}, {msPerIteration});
         </script>
     </body>
     </html>
     '''
 
-
 @app.route('/check-update')
 def check_update():
-    global color, triggered, lerping
-    return jsonify(triggered=triggered, lerping=lerping, color=color, html=generate_rows_html([3, 5, 5, 1]) if triggered else "")
+    global color, triggered, lerpingElements
+    # Construct the response with the current state and HTML content
+    response = {
+        'triggered': triggered,
+        'lerpingElements': lerpingElements,  # Make sure this is correctly populated
+        'color': color,
+        'html': generate_rows_html([3, 5, 5, 1]) if triggered else ""
+    }
+    return jsonify(response)
 
-@app.route('/trigger-red', methods=['POST'])
-def trigger_red():
-    global lerping
-    lerping = True
-    # Start a timer to reset the lerping flag after the lerp duration
-    threading.Timer(lerpDuration, reset_lerp_flag).start()
+# Global variable for tracking lerping states
+lerpingElements = {}
+
+@app.route('/trigger-red/<element_id>', methods=['POST'])
+def trigger_specific_red(element_id):
+    global lerpingElements
+    lerpingElements[element_id] = True  # Set the lerping state for the specific element
+    return jsonify(success=True, message=f"Triggered red for {element_id}")
+
+@app.route('/reset-lerp/<element_id>', methods=['POST'])
+def reset_lerp(element_id):
+    global lerpingElements
+    # Remove the element from the lerping elements
+    if element_id in lerpingElements:
+        lerpingElements[element_id] = False
     return jsonify(success=True)
 
 def reset_lerp_flag():
@@ -176,15 +213,13 @@ def trigger():
     triggered = True
     return jsonify(success=True)
 
-def revert_color(original_color):
-    global color
-    color = original_color
-
 def generate_rows_html(rows):
     html = ''
-    for row_count in rows:
-        html += '<div class="row">' + ''.join([f'<div class="circle"></div>' for _ in range(row_count)]) + '</div>'
-    # Add logic to generate lines here, or handle it dynamically with JavaScript/SVG
+    for i, row_count in enumerate(rows):
+        html += f'<div class="row">'
+        for j in range(row_count):
+            html += f'<div id="circle_{i}_{j}" class="circle"></div>'
+        html += '</div>'
     return html
 
 if __name__ == '__main__':
