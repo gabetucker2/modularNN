@@ -15,12 +15,11 @@ def index():
     <!doctype html>
     <html>
     <head>
-        <title>Dynamic Circles and Lines</title>
+        <title>Neural Network Visualization</title>
         <style>
             .circle {{
-                width: 100px;
-                height: 100px;
-                line-height: 100px;
+                width: 150px;
+                height: 150px;
                 border-radius: 50%;
                 display: inline-block;
                 margin: 10px;
@@ -29,35 +28,75 @@ def index():
                 font-size: 16px;
                 font-weight: bold;
                 background-color: {color};
+                position: relative;
+                z-index: 2;
             }}
             .row {{
                 text-align: center;
             }}
-            /* Additional styles for lines here */
         </style>
     </head>
     <body>
         <div id="circles-container">{content}</div>
+        <div id="lines-container"></div>
         <script>
+            function drawLines() {{
+                var linesContainer = document.getElementById("lines-container");
+                linesContainer.innerHTML = ""; // Clear previous lines
+
+                var rows = document.getElementsByClassName("row");
+                if (rows.length < 2) return; // Ensure there are at least two rows
+
+                for (let i = 0; i < rows.length - 1; i++) {{
+                    let startCircles = rows[i].getElementsByClassName("circle");
+                    let endCircles = rows[i + 1].getElementsByClassName("circle");
+
+                    for (let startCircle of startCircles) {{
+                        let startRect = startCircle.getBoundingClientRect();
+
+                        for (let endCircle of endCircles) {{
+                            let endRect = endCircle.getBoundingClientRect();
+
+                            let startX = startRect.left + startRect.width / 2;
+                            let startY = startRect.top + startRect.height / 2;
+                            let endX = endRect.left + endRect.width / 2;
+                            let endY = endRect.top + endRect.height / 2;
+
+                            let lineLength = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+                            let angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI;
+
+                            let lineStyle = `position: absolute; width: ${{lineLength}}px; height: 2px; background-color: black; top: ${{startY}}px; left: ${{startX}}px; transform: rotate(${{angle}}deg); transform-origin: 0 0;`;
+
+                            let line = document.createElement("div");
+                            line.setAttribute("style", lineStyle);
+                            linesContainer.appendChild(line);
+                        }}
+                    }}
+                }}
+            }}
+
             setInterval(function() {{
-                fetch('/check-update')
+                fetch("/check-update")
                     .then(response => response.json())
                     .then(data => {{
-                        var container = document.getElementById('circles-container');
+                        var container = document.getElementById("circles-container");
                         if (data.triggered) {{
                             container.innerHTML = data.html;
+                            drawLines(); // Call drawLines to add lines
                         }}
-                        var circles = container.getElementsByClassName('circle');
+                        var circles = container.getElementsByClassName("circle");
                         for (var i = 0; i < circles.length; i++) {{
                             circles[i].style.backgroundColor = data.color;
                         }}
                     }})
-                    .catch(error => console.error('Error:', error));
+                    .catch(error => console.error("Error:", error));
             }}, 50);
         </script>
     </body>
     </html>
     '''
+
+
 
 
 @app.route('/check-update')
