@@ -1,14 +1,16 @@
 from flask import Flask, jsonify
 import threading
 
+# This code is an abominable minimal viable product and will be improved in the future.
+
 app = Flask(__name__)
 
 # Global variables
 triggered = False
 color = "black"
 lerping = False
-lerpDuration = 1
-msPerIteration = 50
+lerpDuration = 0.2
+msPerIteration = 10
 
 @app.route('/')
 def index():
@@ -65,7 +67,13 @@ def index():
                         for (let ei = 0; ei < endCircles.length; ei++) {{
                             let startCircle = startCircles[si];
                             let endCircle = endCircles[ei];
-                            let lineId = `line_${{startCircle.id}}_to_${{endCircle.id}}`;
+
+                            // Extract the numeric part from the circle IDs
+                            let startCircleIdPart = startCircle.id.replace("circle_", "");
+                            let endCircleIdPart = endCircle.id.replace("circle_", "");
+
+                            // Construct line ID based on the numeric parts of the circle IDs
+                            let lineId = `line_${{startCircleIdPart}}_${{endCircleIdPart}}`;
                             let line = document.createElement("div");
                             line.className = "line";
                             line.id = lineId;
@@ -139,6 +147,7 @@ def index():
                 const element = document.getElementById(elementId);
                 if (element) {{
                     const interpolatedColor = interpolateColor(targetColor, originalColor, progress);
+                    element.style.color = interpolatedColor;
                     element.style.backgroundColor = interpolatedColor;
                 }}
             }}
