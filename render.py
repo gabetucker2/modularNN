@@ -95,28 +95,32 @@ def index():
             }}
 
             let lerpingElements = {{}};
+            let resettingElements = {{}};
             const lerpDuration = {lerpDuration * 1000};
             const originalColor = '#000000'; // Define originalColor globally
 
             function triggerLerp(elementId) {{
-                if (!lerpingElements[elementId]?.lerping) {{
-                    lerpingElements[elementId] = {{
-                        lerping: true,
-                        lerpStart: performance.now(),
-                        color: '#ff0000'
-                    }};
-                    requestAnimationFrame(function(timestamp) {{
-                        lerpColor(timestamp, elementId);
-                    }});
-                }}
+                const now = performance.now();
+
+                lerpingElements[elementId] = lerpingElements[elementId] || {{}};
+                lerpingElements[elementId].latestTriggerTime = now;
+                lerpingElements[elementId].lerping = true;
+                lerpingElements[elementId].lerpStart = now; // Always reset lerpStart on new trigger
+                lerpingElements[elementId].color = '#ff0000';
+
+                requestAnimationFrame(function(timestamp) {{
+                    lerpColor(timestamp, elementId);
+                }});
             }}
 
-            function lerpColor(time, elementId) {{
+            function lerpColor(time, elementId, restart) {{
                 const state = lerpingElements[elementId];
-                if (state.lerping) {{
+                if (state && state.lerping) {{
+                    if (state.latestTriggerTime > state.lerpStart) {{
+                        state.lerpStart = state.latestTriggerTime;
+                    }}
                     const elapsed = time - state.lerpStart;
                     const progress = Math.min(elapsed / lerpDuration, 1);
-                    console.log(progress);
                     updateElementColor(elementId, state.color, progress);
 
                     if (elapsed < lerpDuration) {{
@@ -139,7 +143,6 @@ def index():
                 }}
             }}
 
-
             function interpolateColor(color1, color2, factor) {{
                 var result = '#';
                 for (let i = 1; i < 6; i += 2) {{
@@ -158,29 +161,33 @@ def index():
                         var container = document.getElementById("circles-container");
                         if (data.triggered) {{
                             container.innerHTML = data.html;
-                            drawLines(); // Call drawLines to add lines
+                            drawLines();
                         }}
-                        // Check for elements that need to start lerping
-                        for (const elementId in data.lerpingElements) {{                        
-                            if (data.lerpingElements[elementId] && !lerpingElements[elementId]?.lerping) {{
+                        for (const elementId in data.lerpingElements) {{
+                            if (data.resettingElements[elementId]) {{
                                 triggerLerp(elementId);
+                                fetch(`/reset-resetting/${{elementId}}`, {{ method: 'POST' }});
                             }}
+
+                            resettingElements[elementId] = data.resettingElements[elementId];
                         }}
                     }})
                     .catch(error => console.error("Error:", error));
             }}, {msPerIteration});
+
         </script>
+
     </body>
     </html>
     '''
 
 @app.route('/check-update')
 def check_update():
-    global color, triggered, lerpingElements
-    # Construct the response with the current state and HTML content
+    global color, triggered, lerpingElements, resettingElements
     response = {
         'triggered': triggered,
-        'lerpingElements': lerpingElements,  # Make sure this is correctly populated
+        'lerpingElements': lerpingElements,
+        'resettingElements': resettingElements,
         'color': color,
         'html': generate_rows_html([3, 5, 5, 1]) if triggered else ""
     }
@@ -188,12 +195,21 @@ def check_update():
 
 # Global variable for tracking lerping states
 lerpingElements = {}
+resettingElements = {}
 
 @app.route('/trigger-red/<element_id>', methods=['POST'])
 def trigger_specific_red(element_id):
-    global lerpingElements
+    global lerpingElements, resettingElements
+    resettingElements[element_id] = True  # If called while already lerping, reset lerp progress
     lerpingElements[element_id] = True  # Set the lerping state for the specific element
     return jsonify(success=True, message=f"Triggered red for {element_id}")
+
+@app.route('/reset-resetting/<element_id>', methods=['POST'])
+def reset_resetting(element_id):
+    global resettingElements
+    if element_id in resettingElements:
+        resettingElements[element_id] = False
+    return jsonify(success=True, message=f"Reset resetting state for {element_id}")
 
 @app.route('/reset-lerp/<element_id>', methods=['POST'])
 def reset_lerp(element_id):
